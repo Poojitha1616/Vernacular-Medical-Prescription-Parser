@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RxRead — Medicine Decoder</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f5f7;
+    --white: #ffffff;
+    --border: rgba(0,0,0,0.08);
+    --blue: #0071e3;
+    --blue-dark: #0064cc;
+    --blue-light: rgba(0,113,227,0.08);
+    --green: #34c759;
+    --orange: #ff9500;
+    --red: #ff3b30;
+    --purple: #af52de;
+    --teal: #32ade6;
+    --text: #1d1d1f;
+    --text2: #6e6e73;
+    --text3: #aeaeb2;
+    --voice-color: #ff3b30;
+    --voice-color2: #ff6b6b;
+    --price-color: #1a8a3a;
+    --price-bg: rgba(52,199,89,0.10);
+    --price-border: rgba(52,199,89,0.25);
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, 'SF Pro Text', BlinkMacSystemFont, sans-serif;
+    min-height: 100vh; -webkit-font-smoothing: antialiased;
+  }
+  body.lang-te { font-family: 'Noto Sans Telugu', -apple-system, sans-serif; }
+  body.lang-hi { font-family: 'Noto Sans Devanagari', -apple-system, sans-serif; }
+
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(245,245,247,0.88);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; height: 52px;
+  }
+  .nav-logo { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .nav-logo span { color: var(--blue); }
+  .lang-switcher { display: flex; gap: 5px; }
+  .lang-btn {
+    background: none; border: 1.5px solid var(--border);
+    color: var(--text2); padding: 5px 12px; border-radius: 980px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s; font-family: inherit;
+  }
+  .lang-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .lang-btn.active { background: var(--blue); border-color: var(--blue); color: white; }
+  .lang-btn.te { font-family: 'Noto Sans Telugu', sans-serif; font-size: 12px; }
+  .lang-btn.hi { font-family: 'Noto Sans Devanagari', sans-serif; }
+
+  .hero { text-align: center; padding: 64px 24px 44px; max-width: 680px; margin: 0 auto; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--blue-light); color: var(--blue);
+    font-size: 13px; font-weight: 500;
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-size: clamp(30px, 5.5vw, 50px); font-weight: 700;
+    letter-spacing: -0.03em; line-height: 1.08; margin-bottom: 14px;
+  }
+  .hero h1 .blue { color: var(--blue); }
+  .hero p { font-size: 16px; color: var(--text2); line-height: 1.65; max-width: 440px; margin: 0 auto 28px; }
+  .steps { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .step {
+    display: flex; align-items: center; gap: 7px;
+    background: white; border: 1px solid var(--border);
+    border-radius: 980px; padding: 7px 14px;
+    font-size: 13px; color: var(--text2); font-weight: 500;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .step-num {
+    width: 18px; height: 18px; background: var(--blue); color: white;
+    border-radius: 50%; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+
+  .wrap { max-width: 660px; margin: 0 auto 80px; padding: 0 20px; }
+  .card {
+    background: var(--white); border-radius: 22px;
+    box-shadow: 0 2px 24px rgba(0,0,0,0.08), 0 0 0 1px var(--border);
+    overflow: hidden;
+  }
+
+  /* TABS */
+  .tabs {
+    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 12px 0; gap: 4px;
+  }
+  .tab {
+    padding: 10px 8px; border: none; background: transparent;
+    font-family: inherit; font-size: 13px; font-weight: 500;
+    color: var(--text2); cursor: pointer; border-radius: 10px 10px 0 0;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .tab:hover { background: var(--bg); color: var(--text); }
+  .tab.active { background: var(--bg); color: var(--text); font-weight: 600; }
+  .tab-icon { font-size: 15px; }
+  .tab.tab-voice { color: var(--voice-color); }
+  .tab.tab-voice:hover { background: rgba(255,59,48,0.06); }
+  .tab.tab-voice.active { background: rgba(255,59,48,0.06); color: var(--voice-color); }
+
+  .panel { display: none; padding: 28px; }
+  .panel.active { display: block; }
+
+  .upload-zone {
+    border: 2px dashed rgba(0,0,0,0.12); border-radius: 16px;
+    padding: 48px 24px; text-align: center; cursor: pointer;
+    transition: all 0.2s; background: var(--bg);
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--blue); background: var(--blue-light);
+  }
+  .upload-icon-wrap {
+    width: 64px; height: 64px; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .icon-rx  { background: linear-gradient(145deg, #e8f4ff, #cce0ff); }
+  .icon-med { background: linear-gradient(145deg, #e8fff1, #c8f5da); }
+
+  .upload-zone h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 5px; }
+  .upload-zone p  { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--blue); color: white; border: none;
+    padding: 10px 22px; border-radius: 980px; font-family: inherit;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-primary:hover { background: var(--blue-dark); }
+  .btn-primary:active { transform: scale(0.97); }
+
+  .img-preview {
+    display: none; position: relative;
+    border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .img-preview img { width: 100%; max-height: 240px; object-fit: contain; display: block; background: #000; }
+  .img-close {
+    position: absolute; top: 10px; right: 10px;
+    width: 28px; height: 28px; background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(8px); border: none; border-radius: 50%;
+    color: white; font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .img-close:hover { background: rgba(0,0,0,0.75); }
+
+  .med-tip {
+    background: linear-gradient(135deg, rgba(52,199,89,0.07), rgba(50,173,230,0.07));
+    border: 1px solid rgba(52,199,89,0.2);
+    border-radius: 14px; padding: 14px 16px;
+    display: flex; gap: 10px; align-items: flex-start;
+    margin-bottom: 16px; font-size: 13px; color: var(--text2); line-height: 1.5;
+  }
+  .tip-icon { font-size: 20px; flex-shrink: 0; }
+  .med-tip strong { color: var(--text); display: block; margin-bottom: 2px; font-size: 14px; }
+
+  textarea {
+    width: 100%; background: var(--bg);
+    border: 1.5px solid transparent; border-radius: 14px;
+    padding: 16px 18px; font-family: inherit;
+    font-size: 15px; color: var(--text); line-height: 1.6;
+    resize: none; min-height: 130px; outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  textarea:focus { border-color: var(--blue); background: white; }
+  textarea::placeholder { color: var(--text3); }
+
+  .btn-wrap { padding: 0 28px 28px; }
+  .btn-analyze {
+    width: 100%; padding: 14px;
+    background: var(--blue); color: white; border: none;
+    border-radius: 14px; font-family: inherit;
+    font-size: 16px; font-weight: 600; cursor: pointer;
+    letter-spacing: -0.01em; transition: background 0.15s, transform 0.1s;
+  }
+  .btn-analyze:hover { background: var(--blue-dark); }
+  .btn-analyze:active { transform: scale(0.99); }
+  .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .error-msg {
+    display: none; margin: 0 28px 14px; padding: 12px 16px;
+    background: rgba(255,59,48,0.07); border: 1px solid rgba(255,59,48,0.2);
+    border-radius: 12px; color: var(--red); font-size: 14px;
+  }
+
+  .loading-state { display: none; padding: 80px 28px; text-align: center; }
+  .loader {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(0,113,227,0.15); border-top-color: var(--blue);
+    border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-state p { color: var(--text2); font-size: 15px; font-weight: 500; }
+  .loading-state small { color: var(--text3); font-size: 13px; display: block; margin-top: 4px; }
+
+  .results-state { display: none; }
+  .results-header {
+    padding: 24px 28px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .results-header h2 { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+  .results-header-right { display: flex; align-items: center; gap: 8px; }
+  .count-badge {
+    background: rgba(52,199,89,0.1); color: var(--green);
+    font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px;
+  }
+
+  /* ===== PRICE BADGE ===== */
+  .price-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--price-bg);
+    border: 1.5px solid var(--price-border);
+    color: var(--price-color);
+    font-size: 14px; font-weight: 700;
+    padding: 5px 14px; border-radius: 20px;
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .price-badge .price-icon { font-size: 13px; }
+
+  /* READ ALOUD BUTTON */
+  .btn-read-aloud {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,59,48,0.08); color: var(--voice-color);
+    border: 1.5px solid rgba(255,59,48,0.2); border-radius: 980px;
+    padding: 6px 14px; font-family: inherit;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-read-aloud:hover { background: rgba(255,59,48,0.14); border-color: var(--voice-color); }
+  .btn-read-aloud.speaking {
+    background: var(--voice-color); color: white; border-color: var(--voice-color);
+    animation: pulse-btn 1.5s ease-in-out infinite;
+  }
+  .btn-read-aloud.speaking:hover { background: #e02d22; }
+  @keyframes pulse-btn {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(255,59,48,0); }
+  }
+
+  .identified-banner {
+    margin: 20px 28px 0;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(52,199,89,0.1); border: 1px solid rgba(52,199,89,0.25);
+    color: #1a8a3a; font-size: 13px; font-weight: 600;
+    padding: 6px 14px; border-radius: 20px;
+  }
+
+  .med-item {
+    padding: 24px 28px; border-bottom: 1px solid var(--border);
+    animation: fadeUp 0.35s ease forwards; opacity: 0; transform: translateY(10px);
+  }
+  @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+  .med-top {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 18px; gap: 12px;
+  }
+  .med-name { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 3px; }
+  .med-generic { font-size: 13px; color: var(--text2); }
+
+  /* Right-side chips stack */
+  .med-chips {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0;
+  }
+  .dose-chip {
+    background: var(--blue-light); color: var(--blue);
+    font-size: 13px; font-weight: 600; padding: 5px 13px;
+    border-radius: 20px; white-space: nowrap;
+  }
+
+  .info-grid { display: flex; flex-direction: column; gap: 12px; }
+  .info-row { display: grid; grid-template-columns: 148px 1fr; gap: 8px; align-items: baseline; }
+  .info-key {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 600;
+    color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .info-val { font-size: 14px; color: var(--text); line-height: 1.55; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .tag {
+    background: var(--bg); border: 1px solid var(--border);
+    font-size: 12px; color: var(--text2);
+    padding: 3px 10px; border-radius: 20px; font-weight: 500;
+  }
+  .warn-strip {
+    margin-top: 14px; background: rgba(255,149,0,0.07);
+    border: 1px solid rgba(255,149,0,0.2); border-radius: 12px;
+    padding: 11px 14px; display: flex; gap: 8px; align-items: flex-start;
+    font-size: 13px; color: #b87000; line-height: 1.5;
+  }
+
+  /* ===== PRICE STRIP (inline in med-item) ===== */
+  .price-strip {
+    margin-top: 14px;
+    background: var(--price-bg);
+    border: 1.5px solid var(--price-border);
+    border-radius: 14px; padding: 12px 16px;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .price-strip .price-emoji { font-size: 20px; flex-shrink: 0; }
+  .price-strip-content { flex: 1; }
+  .price-strip-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--price-color); margin-bottom: 2px;
+  }
+  .price-strip-value {
+    font-size: 18px; font-weight: 800; color: var(--price-color);
+    letter-spacing: -0.02em; line-height: 1.2;
+  }
+  .price-strip-note {
+    font-size: 11px; color: var(--text2); margin-top: 2px;
+  }
+
+  .disclaimer {
+    padding: 16px 28px; display: flex; gap: 10px;
+    border-top: 1px solid var(--border); background: var(--bg);
+    font-size: 12px; color: var(--text2); line-height: 1.5;
+  }
+  .reset-wrap { text-align: center; padding: 20px; border-top: 1px solid var(--border); }
+  .btn-reset {
+    background: none; border: 1.5px solid var(--border);
+    color: var(--text2); padding: 9px 22px; border-radius: 980px;
+    font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-reset:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* ===================== VOICE PANEL ===================== */
+  .voice-panel {
+    padding: 28px; display: none; flex-direction: column; align-items: center; gap: 0;
+  }
+  .voice-panel.active { display: flex; }
+
+  .voice-intro {
+    text-align: center; margin-bottom: 28px; max-width: 360px;
+  }
+  .voice-intro h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .voice-intro p { font-size: 14px; color: var(--text2); line-height: 1.6; }
+
+  .mic-outer {
+    position: relative; width: 120px; height: 120px; margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mic-ring {
+    position: absolute; border-radius: 50%;
+    border: 2px solid rgba(255,59,48,0.15);
+    animation: ring-expand 2s ease-out infinite;
+  }
+  .mic-ring:nth-child(1) { width: 120px; height: 120px; animation-delay: 0s; }
+  .mic-ring:nth-child(2) { width: 100px; height: 100px; animation-delay: 0.4s; }
+  .mic-ring:nth-child(3) { width: 80px; height: 80px; animation-delay: 0.8s; }
+  @keyframes ring-expand {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    100% { transform: scale(1.35); opacity: 0; }
+  }
+  .mic-ring.idle { animation-play-state: paused; opacity: 0; }
+
+  .mic-btn {
+    position: relative; z-index: 2;
+    width: 80px; height: 80px; border-radius: 50%;
+    background: linear-gradient(145deg, #ff6b6b, #ff3b30);
+    border: none; cursor: pointer; color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    box-shadow: 0 8px 24px rgba(255,59,48,0.35), 0 2px 8px rgba(0,0,0,0.12);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .mic-btn:hover { transform: scale(1.06); box-shadow: 0 10px 28px rgba(255,59,48,0.45); }
+  .mic-btn:active { transform: scale(0.95); }
+  .mic-btn.listening {
+    background: linear-gradient(145deg, #ff3b30, #cc0000);
+    animation: mic-pulse 1s ease-in-out infinite;
+  }
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 8px 24px rgba(255,59,48,0.35), 0 0 0 0 rgba(255,59,48,0.5); }
+    50% { box-shadow: 0 8px 24px rgba(255,59,48,0.5), 0 0 0 12px rgba(255,59,48,0); }
+  }
+
+  .waveform {
+    display: flex; align-items: center; gap: 3px; height: 32px;
+    margin-bottom: 16px; opacity: 0; transition: opacity 0.3s;
+  }
+  .waveform.active { opacity: 1; }
+  .wave-bar {
+    width: 3px; border-radius: 2px; background: var(--voice-color);
+    animation: wave-anim 0.8s ease-in-out infinite;
+  }
+  .wave-bar:nth-child(1) { animation-delay: 0s; }
+  .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+  .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+  .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+  .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+  .wave-bar:nth-child(6) { animation-delay: 0.3s; }
+  .wave-bar:nth-child(7) { animation-delay: 0.2s; }
+  .wave-bar:nth-child(8) { animation-delay: 0.1s; }
+  .wave-bar:nth-child(9) { animation-delay: 0s; }
+  @keyframes wave-anim {
+    0%, 100% { height: 4px; }
+    50% { height: 24px; }
+  }
+
+  .voice-status {
+    font-size: 14px; font-weight: 500; color: var(--text2);
+    margin-bottom: 16px; text-align: center; min-height: 20px;
+    transition: color 0.2s;
+  }
+  .voice-status.listening { color: var(--voice-color); }
+  .voice-status.processing { color: var(--blue); }
+
+  .voice-transcript {
+    width: 100%; background: var(--bg); border-radius: 14px;
+    padding: 14px 16px; font-size: 14px; color: var(--text);
+    line-height: 1.6; min-height: 56px; border: 1.5px solid var(--border);
+    display: none; margin-bottom: 16px;
+  }
+  .voice-transcript.has-text { display: block; }
+
+  .voice-actions {
+    display: flex; gap: 8px; width: 100%; justify-content: center; flex-wrap: wrap;
+  }
+  .btn-voice-analyze {
+    flex: 1; max-width: 220px; padding: 12px 20px;
+    background: var(--blue); color: white; border: none;
+    border-radius: 12px; font-family: inherit;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, transform 0.1s; display: none;
+  }
+  .btn-voice-analyze:hover { background: var(--blue-dark); }
+  .btn-voice-analyze:active { transform: scale(0.98); }
+  .btn-voice-analyze.visible { display: block; }
+
+  .btn-voice-clear {
+    padding: 12px 18px;
+    background: none; color: var(--text2); border: 1.5px solid var(--border);
+    border-radius: 12px; font-family: inherit;
+    font-size: 15px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s; display: none;
+  }
+  .btn-voice-clear:hover { border-color: var(--red); color: var(--red); }
+  .btn-voice-clear.visible { display: block; }
+
+  .voice-hint {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: rgba(0,113,227,0.05); border: 1px solid rgba(0,113,227,0.12);
+    border-radius: 12px; padding: 12px 14px; font-size: 13px;
+    color: var(--text2); line-height: 1.5; width: 100%; margin-top: 8px;
+  }
+
+  .speech-progress-bar {
+    display: none; width: 100%; height: 3px; background: rgba(255,59,48,0.12);
+    border-radius: 2px; margin-bottom: 16px; overflow: hidden;
+  }
+  .speech-progress-bar.active { display: block; }
+  .speech-progress-fill {
+    height: 100%; background: var(--voice-color);
+    border-radius: 2px; width: 0%; transition: width linear;
+  }
+
+  .med-item.currently-speaking {
+    background: rgba(255,59,48,0.03);
+    border-left: 3px solid var(--voice-color);
+    padding-left: 25px;
+    transition: all 0.3s;
+  }
+
+  .read-aloud-banner {
+    margin: 20px 28px 0;
+    background: linear-gradient(135deg, #fff1f0, #fff8f0);
+    border: 2px solid rgba(255,59,48,0.2);
+    border-radius: 20px;
+    padding: 22px 24px;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 14px; text-align: center;
+  }
+  .read-aloud-banner .banner-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(145deg, #ff6b6b, #ff3b30);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    box-shadow: 0 6px 20px rgba(255,59,48,0.3);
+    flex-shrink: 0;
+  }
+  .read-aloud-banner .banner-icon.speaking { animation: icon-pulse 1s ease-in-out infinite; }
+  @keyframes icon-pulse {
+    0%,100% { box-shadow: 0 6px 20px rgba(255,59,48,0.3), 0 0 0 0 rgba(255,59,48,0.4); }
+    50%      { box-shadow: 0 6px 20px rgba(255,59,48,0.3), 0 0 0 14px rgba(255,59,48,0); }
+  }
+  .read-aloud-banner .banner-text h3 {
+    font-size: 17px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; color: var(--text);
+  }
+  .read-aloud-banner .banner-text p { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .btn-big-listen {
+    width: 100%; padding: 16px 24px;
+    background: linear-gradient(135deg, #ff6b6b, #ff3b30);
+    color: white; border: none; border-radius: 14px;
+    font-family: inherit; font-size: 18px; font-weight: 700;
+    cursor: pointer; letter-spacing: -0.01em;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: opacity 0.15s, transform 0.1s;
+    box-shadow: 0 4px 16px rgba(255,59,48,0.35);
+  }
+  .btn-big-listen:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,59,48,0.4); }
+  .btn-big-listen:active { transform: scale(0.98); }
+  .btn-big-listen.speaking { background: linear-gradient(135deg, #cc2200, #ff3b30); }
+
+  .replay-banner {
+    display: none;
+    margin: 0 28px 0;
+    background: rgba(52,199,89,0.07);
+    border: 1.5px solid rgba(52,199,89,0.25);
+    border-radius: 16px; padding: 16px 20px;
+    align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .replay-banner.visible { display: flex; }
+  .replay-banner-left { display: flex; align-items: center; gap: 10px; }
+  .replay-banner-left .replay-icon { font-size: 22px; }
+  .replay-banner-left p { font-size: 14px; font-weight: 500; color: var(--text); }
+  .replay-banner-left small { font-size: 12px; color: var(--text2); display: block; margin-top: 1px; }
+  .btn-replay {
+    flex-shrink: 0; padding: 9px 18px;
+    background: var(--green); color: white; border: none;
+    border-radius: 980px; font-family: inherit;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: opacity 0.15s, transform 0.1s;
+    box-shadow: 0 2px 8px rgba(52,199,89,0.3);
+  }
+  .btn-replay:hover { opacity: 0.88; }
+  .btn-replay:active { transform: scale(0.96); }
+
+  .now-reading-label {
+    display: none; font-size: 12px; font-weight: 600;
+    color: var(--voice-color); letter-spacing: 0.04em;
+    text-transform: uppercase; margin-top: 4px;
+  }
+  .now-reading-label.visible { display: block; }
+
+  .voice-selector-wrap {
+    margin: 16px 28px 0;
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .voice-selector-wrap label {
+    font-size: 13px; font-weight: 600; color: var(--text2);
+    white-space: nowrap; display: flex; align-items: center; gap: 5px;
+  }
+  .voice-select {
+    flex: 1; min-width: 180px; background: white;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 7px 12px; font-family: inherit; font-size: 13px;
+    color: var(--text); outline: none; cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .voice-select:focus { border-color: var(--blue); }
+
+  .voice-warn {
+    display: none; margin: 10px 28px 0;
+    background: rgba(255,149,0,0.08); border: 1px solid rgba(255,149,0,0.25);
+    border-radius: 12px; padding: 11px 14px;
+    font-size: 13px; color: #995c00; line-height: 1.5;
+    gap: 8px; align-items: flex-start;
+  }
+  .voice-warn.visible { display: flex; }
+
+  @media (max-width: 520px) {
+    .tabs { padding: 10px 8px 0; }
+    .tab { font-size: 11px; padding: 9px 3px; gap: 2px; }
+    .tab-icon { font-size: 13px; }
+    .panel, .btn-wrap { padding-left: 20px; padding-right: 20px; }
+    .error-msg, .results-header, .med-item, .disclaimer, .identified-banner { padding-left: 20px; padding-right: 20px; }
+    .info-row { grid-template-columns: 1fr; gap: 3px; }
+    nav { padding: 0 14px; }
+    .lang-btn { padding: 4px 9px; font-size: 11px; }
+    .hero { padding-top: 44px; }
+    .results-header { flex-wrap: wrap; gap: 8px; }
+    .med-chips { flex-direction: row; align-items: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Rx<span>Read</span></div>
+  <div class="lang-switcher">
+    <button class="lang-btn active" onclick="setLang('en',this)">English</button>
+    <button class="lang-btn te" onclick="setLang('te',this)">తెలుగు</button>
+    <button class="lang-btn hi" onclick="setLang('hi',this)">हिन्दी</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="eyebrow">✦ <span id="t-eyebrow">AI-Powered</span></div>
+  <h1 id="t-h1">Understand your <span class="blue" id="t-h1b">prescription</span></h1>
+  <p id="t-sub">Upload your prescription or snap a photo of any medicine — get a clear breakdown instantly.</p>
+  <div class="steps">
+    <div class="step"><span class="step-num">1</span><span id="t-s1">Upload or type</span></div>
+    <div class="step"><span class="step-num">2</span><span id="t-s2">AI reads it</span></div>
+    <div class="step"><span class="step-num">3</span><span id="t-s3">Get clear details</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="card">
+
+    <div id="inputSection">
+      <div class="tabs">
+        <button class="tab active" id="tab-rx"    onclick="switchTab('rx')"><span class="tab-icon">📋</span><span id="t-tab1">Prescription</span></button>
+        <button class="tab"        id="tab-med"   onclick="switchTab('med')"><span class="tab-icon">💊</span><span id="t-tab2">Medicine Photo</span></button>
+        <button class="tab"        id="tab-txt"   onclick="switchTab('txt')"><span class="tab-icon">✏️</span><span id="t-tab3">Type</span></button>
+        <button class="tab tab-voice" id="tab-voice" onclick="switchTab('voice')"><span class="tab-icon">🎙️</span><span id="t-tab4">Voice</span></button>
+      </div>
+
+      <!-- PRESCRIPTION -->
+      <div class="panel active" id="panel-rx">
+        <div class="upload-zone" id="zone-rx" onclick="document.getElementById('fileRx').click()">
+          <div class="upload-icon-wrap icon-rx">📋</div>
+          <h3 id="t-rxTitle">Upload Prescription</h3>
+          <p id="t-rxSub">Take a photo or upload a scan of your doctor's prescription</p>
+          <button class="btn-primary" onclick="event.stopPropagation();document.getElementById('fileRx').click()">
+            📎 <span id="t-rxBtn">Choose File</span>
+          </button>
+          <input type="file" id="fileRx" accept="image/*" onchange="handleFile(event,'rx')">
+        </div>
+        <div class="img-preview" id="preview-rx">
+          <img id="img-rx" src="" alt="">
+          <button class="img-close" onclick="removeImg('rx')">✕</button>
+        </div>
+      </div>
+
+      <!-- MEDICINE PHOTO -->
+      <div class="panel" id="panel-med">
+        <div class="med-tip">
+          <span class="tip-icon">💡</span>
+          <div>
+            <strong id="t-tipTitle">How to use this</strong>
+            <span id="t-tipBody">Take a clear photo of your tablet strip, medicine bottle, or syrup label. The AI will identify the medicine and explain it.</span>
+          </div>
+        </div>
+        <div class="upload-zone" id="zone-med" onclick="document.getElementById('fileMed').click()">
+          <div class="upload-icon-wrap icon-med">💊</div>
+          <h3 id="t-medTitle">Upload Medicine Photo</h3>
+          <p id="t-medSub">Tablet strip, syrup bottle, or medicine packaging</p>
+          <button class="btn-primary" onclick="event.stopPropagation();document.getElementById('fileMed').click()">
+            📷 <span id="t-medBtn">Take / Upload Photo</span>
+          </button>
+          <input type="file" id="fileMed" accept="image/*" capture="environment" onchange="handleFile(event,'med')">
+        </div>
+        <div class="img-preview" id="preview-med">
+          <img id="img-med" src="" alt="">
+          <button class="img-close" onclick="removeImg('med')">✕</button>
+        </div>
+      </div>
+
+      <!-- TYPE MANUALLY -->
+      <div class="panel" id="panel-txt">
+        <textarea id="textInput" rows="5"></textarea>
+      </div>
+
+      <!-- VOICE PANEL -->
+      <div class="panel voice-panel" id="panel-voice">
+        <div class="voice-intro">
+          <h3 id="t-voiceTitle">🎙️ Voice Input</h3>
+          <p id="t-voiceSub">Tap the mic and speak your medicine name or describe your prescription — the AI will analyze it for you.</p>
+        </div>
+        <div class="mic-outer">
+          <div class="mic-ring idle" id="micRing1"></div>
+          <div class="mic-ring idle" id="micRing2"></div>
+          <div class="mic-ring idle" id="micRing3"></div>
+          <button class="mic-btn" id="micBtn" onclick="toggleListening()">🎙️</button>
+        </div>
+        <div class="waveform" id="waveform">
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        </div>
+        <div class="voice-status" id="voiceStatus">Tap mic to speak</div>
+        <div class="voice-transcript" id="voiceTranscript"></div>
+        <div class="voice-actions">
+          <button class="btn-voice-analyze" id="btnVoiceAnalyze" onclick="analyzeVoice()">
+            ✨ <span id="t-voiceAnalyzeBtn">Analyze</span>
+          </button>
+          <button class="btn-voice-clear" id="btnVoiceClear" onclick="clearVoice()">
+            ✕ <span id="t-voiceClearBtn">Clear</span>
+          </button>
+        </div>
+        <div class="voice-hint">
+          <span>💬</span>
+          <span id="t-voiceHint">Try saying: "Amoxicillin 500mg three times daily" or "I have Paracetamol 650mg for fever, tell me about it"</span>
+        </div>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+      <div class="btn-wrap" id="analyzeBtnWrap">
+        <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">
+          <span id="t-analyzeBtn">Analyze</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- LOADING -->
+    <div class="loading-state" id="loadingState">
+      <div class="loader"></div>
+      <p id="t-loading">Analyzing…</p>
+      <small id="t-loadingSub">This usually takes a few seconds</small>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results-state" id="resultsState">
+      <div class="results-header">
+        <h2 id="t-resultsTitle">Your Medications</h2>
+        <span class="count-badge" id="medBadge"></span>
+      </div>
+
+      <!-- BIG READ ALOUD BANNER -->
+      <div class="read-aloud-banner" id="readAloudBanner">
+        <div class="banner-icon" id="bannerIcon">🔊</div>
+        <div class="banner-text">
+          <h3 id="t-bannerTitle">Can't read? Let us read it for you!</h3>
+          <p id="t-bannerSub">Tap the button below to hear all your medication details read aloud clearly.</p>
+          <div class="now-reading-label" id="nowReadingLabel">🎙️ Now reading…</div>
+        </div>
+        <button class="btn-big-listen" id="btnBigListen" onclick="toggleReadAloud()">
+          <span id="btnBigListenIcon">🔊</span>
+          <span id="t-bigListenBtn">Hear My Medications</span>
+        </button>
+      </div>
+
+      <!-- Speech progress bar -->
+      <div class="speech-progress-bar" id="speechProgressBar">
+        <div class="speech-progress-fill" id="speechProgressFill"></div>
+      </div>
+
+      <!-- REPLAY BANNER -->
+      <div class="replay-banner" id="replayBanner">
+        <div class="replay-banner-left">
+          <span class="replay-icon">✅</span>
+          <div>
+            <p id="t-replayTitle">Reading complete!</p>
+            <small id="t-replaySub">Want to hear it again?</small>
+          </div>
+        </div>
+        <button class="btn-replay" onclick="replayReadAloud()">
+          🔁 <span id="t-replayBtn">Replay</span>
+        </button>
+      </div>
+
+      <!-- VOICE SELECTOR -->
+      <div class="voice-selector-wrap" id="voiceSelectorWrap">
+        <label>🗣️ <span id="t-voiceSelectLabel">Read in:</span></label>
+        <select class="voice-select" id="voiceSelect" onchange="onVoiceSelectChange()">
+          <option value="">Loading voices…</option>
+        </select>
+      </div>
+
+      <!-- NO VOICE WARNING -->
+      <div class="voice-warn" id="voiceWarn">
+        <span>⚠️</span>
+        <span id="t-voiceWarnMsg">Your device doesn't have a Telugu/Hindi voice installed.</span>
+      </div>
+
+      <div id="medsContainer"></div>
+
+      <div class="disclaimer">
+        <span style="font-size:15px;flex-shrink:0">ℹ️</span>
+        <span id="t-disclaimer">For educational purposes only. Prices shown are approximate Indian market rates and may vary. Always follow your doctor's instructions and consult a healthcare professional before making changes to your medications.</span>
+      </div>
+      <div class="reset-wrap">
+        <button class="btn-reset" onclick="reset()">← <span id="t-resetBtn">Analyze another</span></button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const TR = {
+  en: {
+    eyebrow:"AI-Powered", h1:"Understand your", h1b:"prescription",
+    sub:"Upload your prescription or snap a photo of any medicine — get a clear breakdown instantly.",
+    s1:"Upload or type", s2:"AI reads it", s3:"Get clear details",
+    tab1:"Prescription", tab2:"Medicine Photo", tab3:"Type", tab4:"Voice",
+    rxTitle:"Upload Prescription", rxSub:"Take a photo or upload a scan of your doctor's prescription", rxBtn:"Choose File",
+    tipTitle:"How to use this", tipBody:"Take a clear photo of your tablet strip, medicine bottle, or syrup label. The AI will identify the medicine and explain it.",
+    medTitle:"Upload Medicine Photo", medSub:"Tablet strip, syrup bottle, or medicine packaging", medBtn:"Take / Upload Photo",
+    txtPlaceholder:"e.g. Tab. Amoxicillin 500mg — 1 tab 3 times daily for 5 days\n     Tab. Paracetamol 650mg — as needed for fever",
+    voiceTitle:"🎙️ Voice Input", voiceSub:"Tap the mic and speak your medicine name or describe your prescription — the AI will analyze it.",
+    voiceHint:`Try saying: "Amoxicillin 500mg three times daily" or "I have Paracetamol 650mg for fever, tell me about it"`,
+    analyzeBtn:"Analyze", voiceAnalyzeBtn:"Analyze", voiceClearBtn:"Clear",
+    loading:"Analyzing…", loadingSub:"This usually takes a few seconds",
+    resultsTitle:"Your Medications", readAloudBtn:"Read Aloud", stopReadingBtn:"Stop Reading",
+    bannerTitle:"Can't read? Let us read it for you!",
+    bannerSub:"Tap the button below to hear all your medication details read aloud clearly.",
+    bigListenBtn:"Hear My Medications", bigListenBtnStop:"Stop Reading",
+    replayTitle:"Reading complete!", replaySub:"Want to hear it again?", replayBtn:"Replay",
+    nowReading:"🎙️ Now reading…",
+    introSpeech: n => `Found ${n} medication${n>1?'s':''}. Here are the details.`,
+    medCount: n => `${n} Medication${n>1?'s':''}`,
+    disclaimer:"For educational purposes only. Prices shown are approximate Indian market rates and may vary. Always follow your doctor's instructions and consult a healthcare professional before making changes.",
+    resetBtn:"Analyze another",
+    errEmpty:"Please upload an image or type your prescription.",
+    errFail:"Something went wrong. Please try again.",
+    errNone:"No medications found. Please try again.",
+    errNoMic:"Microphone not supported in this browser. Please use Chrome or Edge.",
+    identifiedAs:"Identified as",
+    voiceStatusIdle:"Tap mic to speak",
+    voiceStatusListening:"Listening… speak now",
+    voiceStatusDone:"Got it! Review & analyze",
+    speakingStatus:"Reading aloud…",
+    labels:{ purpose:"Purpose", schedule:"Schedule", duration:"Duration", instructions:"Instructions", food:"Food to avoid", storage:"Storage", side:"Side effects", price:"Est. Price" },
+    voiceSelectLabel:"Read in:",
+    voiceWarnMsg:"Your device doesn't have a Telugu/Hindi voice installed. To fix: Go to Settings → Accessibility → Text-to-Speech → Install voice for your language.",
+    aiLang:"Respond in English. ALL field values MUST be written in English."
+  },
+  te: {
+    eyebrow:"AI ఆధారిత", h1:"మీ", h1b:"ప్రిస్క్రిప్షన్ అర్థం చేసుకోండి",
+    sub:"మీ ప్రిస్క్రిప్షన్ అప్‌లోడ్ చేయండి లేదా మందు ఫోటో తీయండి — వెంటనే స్పష్టమైన వివరాలు పొందండి.",
+    s1:"అప్‌లోడ్ లేదా టైప్", s2:"AI చదువుతుంది", s3:"స్పష్టమైన వివరాలు",
+    tab1:"ప్రిస్క్రిప్షన్", tab2:"మందు ఫోటో", tab3:"టైప్", tab4:"వాయిస్",
+    rxTitle:"ప్రిస్క్రిప్షన్ అప్‌లోడ్ చేయండి", rxSub:"మీ ప్రిస్క్రిప్షన్ ఫోటో తీయండి లేదా స్కాన్ అప్‌లోడ్ చేయండి", rxBtn:"ఫైల్ ఎంచుకోండి",
+    tipTitle:"ఎలా ఉపయోగించాలి", tipBody:"మీ టాబ్లెట్ స్ట్రిప్, సిరప్ బాటిల్ లేదా మందు ప్యాకెజింగ్ స్పష్టమైన ఫోటో తీయండి.",
+    medTitle:"మందు ఫోటో అప్‌లోడ్ చేయండి", medSub:"టాబ్లెట్ స్ట్రిప్, సిరప్ బాటిల్, లేదా మందు ప్యాకేజింగ్", medBtn:"ఫోటో తీయండి / అప్‌లోడ్ చేయండి",
+    txtPlaceholder:"ఉదా: Tab. Amoxicillin 500mg — రోజుకు 3 సార్లు 5 రోజులు",
+    voiceTitle:"🎙️ వాయిస్ ఇన్‌పుట్", voiceSub:"మైక్ నొక్కి మీ మందు పేరు చెప్పండి — AI విశ్లేషిస్తుంది.",
+    voiceHint:`ఇలా చెప్పండి: "Amoxicillin 500mg రోజుకు మూడు సార్లు"`,
+    analyzeBtn:"విశ్లేషించండి", voiceAnalyzeBtn:"విశ్లేషించండి", voiceClearBtn:"తొలగించు",
+    loading:"విశ్లేషిస్తున్నాం…", loadingSub:"ఇది కొన్ని సెకన్లు మాత్రమే పడుతుంది",
+    resultsTitle:"మీ మందులు", readAloudBtn:"చదివి వినిపించు", stopReadingBtn:"ఆపు",
+    bannerTitle:"చదవలేకపోతున్నారా? మేము చదివి వినిపిస్తాం!",
+    bannerSub:"మీ మందుల వివరాలు వినడానికి దిగువ బటన్ నొక్కండి.",
+    bigListenBtn:"నా మందులు వినండి", bigListenBtnStop:"ఆపు",
+    replayTitle:"చదవడం పూర్తయింది!", replaySub:"మళ్ళీ వినాలా?", replayBtn:"మళ్ళీ వినండి",
+    nowReading:"🎙️ చదువుతున్నాం…",
+    introSpeech: n => `${n} మందులు కనుగొనబడ్డాయి. ఇవి వివరాలు.`,
+    medCount: n => `${n} మందు${n>1?'లు':''}`,
+    disclaimer:"ఇది కేవలం విద్యా ప్రయోజనాల కోసం మాత్రమే. ధరలు సుమారు భారతీయ మార్కెట్ ధరలు, మారవచ్చు. మీ డాక్టర్ సూచనలను ఎల్లప్పుడూ పాటించండి.",
+    resetBtn:"మరొకటి విశ్లేషించండి",
+    errEmpty:"దయచేసి ఒక ఫోటో అప్‌లోడ్ చేయండి లేదా ప్రిస్క్రిప్షన్ టైప్ చేయండి.",
+    errFail:"ఏదో తప్పు జరిగింది. దయచేసి మళ్ళీ ప్రయత్నించండి.",
+    errNone:"మందులు కనుగొనబడలేదు. దయచేసి మళ్ళీ ప్రయత్నించండి.",
+    errNoMic:"మైక్రోఫోన్ సపోర్ట్ లేదు. Chrome లేదా Edge వాడండి.",
+    identifiedAs:"గుర్తించబడింది",
+    voiceStatusIdle:"మైక్ నొక్కి మాట్లాడండి",
+    voiceStatusListening:"వింటున్నాం… మాట్లాడండి",
+    voiceStatusDone:"అయింది! విశ్లేషించండి",
+    speakingStatus:"చదువుతున్నాం…",
+    labels:{ purpose:"ఉపయోగం", schedule:"సమయం", duration:"వ్యవధి", instructions:"సూచనలు", food:"తినకూడని పదార్థాలు", storage:"భద్రపరచడం", side:"దుష్ప్రభావాలు", price:"అంచనా ధర" },
+    voiceSelectLabel:"చదవడానికి భాష:",
+    voiceWarnMsg:"మీ డివైస్‌లో తెలుగు వాయిస్ ఇన్‌స్టాల్ కాలేదు. పరిష్కారం: Settings → Accessibility → Text-to-Speech → తెలుగు వాయిస్ ఇన్‌స్టాల్ చేయండి.",
+    aiLang:"CRITICAL: Respond ENTIRELY in Telugu script only. Every single field — purpose, schedule, duration, instructions, sideEffects, warnings, foodInteractions, storage — MUST be written fully in Telugu script. Medicine name, dosage, and priceINR (the price field) may stay in English/numbers."
+  },
+  hi: {
+    eyebrow:"AI आधारित", h1:"अपना", h1b:"नुस्खा समझें",
+    sub:"अपना पर्चा अपलोड करें या किसी भी दवाई की फ़ोटो लें — तुरंत स्पष्ट जानकारी पाएं।",
+    s1:"अपलोड या टाइप", s2:"AI पढ़ता है", s3:"स्पष्ट जानकारी",
+    tab1:"पर्चा", tab2:"दवाई फ़ोटो", tab3:"टाइप", tab4:"वॉइस",
+    rxTitle:"पर्चा अपलोड करें", rxSub:"अपने डॉक्टर के पर्चे की फ़ोटो लें या स्कैन अपलोड करें", rxBtn:"फ़ाइल चुनें",
+    tipTitle:"इसे कैसे उपयोग करें", tipBody:"अपनी टैबलेट स्ट्रिप, दवाई की बोतल, या सिरप का स्पष्ट फ़ोटो लें।",
+    medTitle:"दवाई की फ़ोटो अपलोड करें", medSub:"टैबलेट स्ट्रिप, सिरप बोतल, या दवाई की पैकेजिंग", medBtn:"फ़ोटो लें / अपलोड करें",
+    txtPlaceholder:"जैसे: Tab. Amoxicillin 500mg — दिन में 3 बार, 5 दिनों तक",
+    voiceTitle:"🎙️ वॉइस इनपुट", voiceSub:"माइक दबाएं और अपनी दवाई का नाम बोलें — AI विश्लेषण करेगा।",
+    voiceHint:`ऐसे बोलें: "Amoxicillin 500mg दिन में तीन बार" या "मुझे Paracetamol 650mg बुखार के लिए है"`,
+    analyzeBtn:"विश्लेषण करें", voiceAnalyzeBtn:"विश्लेषण करें", voiceClearBtn:"मिटाएं",
+    loading:"विश्लेषण हो रहा है…", loadingSub:"इसमें कुछ सेकंड लगेंगे",
+    resultsTitle:"आपकी दवाइयाँ", readAloudBtn:"ज़ोर से पढ़ें", stopReadingBtn:"रोकें",
+    bannerTitle:"पढ़ नहीं सकते? हम पढ़कर सुनाएंगे!",
+    bannerSub:"अपनी दवाइयों की जानकारी सुनने के लिए नीचे बटन दबाएं।",
+    bigListenBtn:"मेरी दवाइयाँ सुनें", bigListenBtnStop:"रोकें",
+    replayTitle:"पढ़ना पूरा हुआ!", replaySub:"फिर से सुनना चाहते हैं?", replayBtn:"दोबारा सुनें",
+    nowReading:"🎙️ पढ़ रहे हैं…",
+    introSpeech: n => `${n} दवाइयाँ मिलीं। यहाँ विवरण हैं।`,
+    medCount: n => `${n} दवाइयाँ`,
+    disclaimer:"यह केवल शैक्षिक उद्देश्यों के लिए है। दिखाई गई कीमतें अनुमानित भारतीय बाज़ार दरें हैं और भिन्न हो सकती हैं। हमेशा अपने डॉक्टर की सलाह मानें।",
+    resetBtn:"दूसरा देखें",
+    errEmpty:"कृपया एक फ़ोटो अपलोड करें या पर्चा टाइप करें।",
+    errFail:"कुछ गलत हो गया। कृपया फिर से प्रयास करें।",
+    errNone:"कोई दवाई नहीं मिली। कृपया दोबारा कोशिश करें।",
+    errNoMic:"माइक्रोफ़ोन समर्थित नहीं। Chrome या Edge का उपयोग करें।",
+    identifiedAs:"पहचान हुई",
+    voiceStatusIdle:"बोलने के लिए माइक दबाएं",
+    voiceStatusListening:"सुन रहे हैं… बोलें",
+    voiceStatusDone:"हो गया! विश्लेषण करें",
+    speakingStatus:"पढ़ रहे हैं…",
+    labels:{ purpose:"उपयोग", schedule:"समय", duration:"अवधि", instructions:"निर्देश", food:"परहेज़", storage:"भंडारण", side:"दुष्प्रभाव", price:"अनुमानित कीमत" },
+    voiceSelectLabel:"पढ़ने की भाषा:",
+    voiceWarnMsg:"आपके डिवाइस में हिंदी वॉइस इंस्टॉल नहीं है। ठीक करने के लिए: Settings → Accessibility → Text-to-Speech → हिंदी वॉइस इंस्टॉल करें।",
+    aiLang:"CRITICAL: Respond ENTIRELY in Hindi Devanagari script only. Every single field — purpose, schedule, duration, instructions, sideEffects, warnings, foodInteractions, storage — MUST be written fully in Hindi Devanagari. Medicine name, dosage, and priceINR (the price field) may stay in English/numbers."
+  }
+};
+
+let lang = 'en';
+let activeTab = 'rx';
+let imgs = { rx:null, rxType:null, med:null, medType:null };
+let recognition = null;
+let isListening = false;
+let voiceText = '';
+let synth = window.speechSynthesis;
+let isSpeaking = false;
+let parsedMeds = [];
+let availableVoices = [];
+let selectedVoice = null;
+
+// ======= VOICE ENGINE =======
+const LANG_CODES = { en: ['en-IN','en-US','en-GB','en'], te: ['te-IN','te'], hi: ['hi-IN','hi'] };
+const LANG_NAMES = { en: 'English', te: 'తెలుగు', hi: 'हिन्दी' };
+
+function loadVoices() {
+  availableVoices = synth.getVoices();
+  if (availableVoices.length === 0) return;
+  populateVoiceDropdown();
+}
+
+function getBestVoice(forLang) {
+  const codes = LANG_CODES[forLang] || LANG_CODES.en;
+  for (const code of codes) {
+    const exact = availableVoices.find(v => v.lang === code);
+    if (exact) return exact;
+  }
+  for (const code of codes) {
+    const prefix = availableVoices.find(v => v.lang.startsWith(code.split('-')[0]));
+    if (prefix) return prefix;
+  }
+  return null;
+}
+
+function populateVoiceDropdown() {
+  const sel = document.getElementById('voiceSelect');
+  if (!sel || availableVoices.length === 0) return;
+  const codes = LANG_CODES[lang];
+  const matching = availableVoices.filter(v => codes.some(c => v.lang.startsWith(c.split('-')[0])));
+  const others   = availableVoices.filter(v => !codes.some(c => v.lang.startsWith(c.split('-')[0])));
+  let html = '';
+  if (matching.length) {
+    html += `<optgroup label="✅ ${LANG_NAMES[lang]} Voices">`;
+    matching.forEach((v, i) => { html += `<option value="${v.name}" ${i===0?'selected':''}>${v.name} (${v.lang})</option>`; });
+    html += '</optgroup>';
+  }
+  html += `<optgroup label="Other Voices">`;
+  others.forEach(v => { html += `<option value="${v.name}">${v.name} (${v.lang})</option>`; });
+  html += '</optgroup>';
+  sel.innerHTML = html;
+  const best = getBestVoice(lang);
+  if (best) sel.value = best.name;
+  selectedVoice = best;
+  const warnEl = document.getElementById('voiceWarn');
+  if (warnEl) {
+    if (lang !== 'en' && !matching.length) warnEl.classList.add('visible');
+    else warnEl.classList.remove('visible');
+  }
+}
+
+function onVoiceSelectChange() {
+  const sel = document.getElementById('voiceSelect');
+  selectedVoice = availableVoices.find(v => v.name === sel.value) || null;
+}
+
+function makeUtterance(text) {
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = lang === 'te' ? 'te-IN' : lang === 'hi' ? 'hi-IN' : 'en-US';
+  utt.rate = 0.88; utt.pitch = 1;
+  const voice = selectedVoice || getBestVoice(lang);
+  if (voice) utt.voice = voice;
+  return utt;
+}
+
+if (synth) { loadVoices(); synth.onvoiceschanged = loadVoices; }
+
+function setLang(l, btn) {
+  lang = l;
+  document.body.className = l==='en' ? '' : `lang-${l}`;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (isSpeaking) stopReadAloud();
+  applyStrings();
+}
+
+function L(k) { return TR[lang][k] !== undefined ? TR[lang][k] : TR.en[k]; }
+
+function applyStrings() {
+  ['eyebrow','h1','h1b','sub','s1','s2','s3','tab1','tab2','tab3','tab4',
+   'rxTitle','rxSub','rxBtn','tipTitle','tipBody','medTitle','medSub','medBtn',
+   'voiceTitle','voiceSub','voiceHint','analyzeBtn','voiceAnalyzeBtn','voiceClearBtn',
+   'loading','loadingSub','resultsTitle','bannerTitle','bannerSub','bigListenBtn',
+   'replayTitle','replaySub','replayBtn','voiceSelectLabel','disclaimer','resetBtn'
+  ].forEach(k => { const el=document.getElementById('t-'+k); if(el) el.textContent=L(k); });
+  const warnEl = document.getElementById('t-voiceWarnMsg');
+  if (warnEl) warnEl.textContent = L('voiceWarnMsg');
+  const ta=document.getElementById('textInput');
+  if(ta) ta.placeholder=L('txtPlaceholder');
+  const vs=document.getElementById('voiceStatus');
+  if(vs && !isListening) vs.textContent=L('voiceStatusIdle');
+  populateVoiceDropdown();
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  const isVoice = tab === 'voice';
+  ['rx','med','txt','voice'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('active', t===tab);
+    document.getElementById(`panel-${t}`).classList.toggle('active', t===tab);
+  });
+  document.getElementById('analyzeBtnWrap').style.display = isVoice ? 'none' : 'block';
+  clearError();
+  if(tab !== 'voice' && isListening) stopListening();
+}
+
+function handleFile(e, w) { if(e.target.files[0]) processFile(e.target.files[0], w); }
+function processFile(file, w) {
+  if(!file.type.startsWith('image/')) { showError(L('errEmpty')); return; }
+  const r=new FileReader();
+  r.onload = ev => {
+    imgs[w]=ev.target.result.split(',')[1];
+    imgs[w+'Type']=file.type;
+    document.getElementById(`img-${w}`).src=ev.target.result;
+    document.getElementById(`preview-${w}`).style.display='block';
+    document.getElementById(`zone-${w}`).style.display='none';
+    clearError();
+  };
+  r.readAsDataURL(file);
+}
+function removeImg(w) {
+  imgs[w]=null; imgs[w+'Type']=null;
+  document.getElementById(`preview-${w}`).style.display='none';
+  document.getElementById(`zone-${w}`).style.display='block';
+  document.getElementById(w==='rx'?'fileRx':'fileMed').value='';
+}
+
+['rx','med'].forEach(w => {
+  const z=document.getElementById(`zone-${w}`);
+  z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('drag-over'); });
+  z.addEventListener('dragleave', ()=> z.classList.remove('drag-over'));
+  z.addEventListener('drop', e => { e.preventDefault(); z.classList.remove('drag-over'); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0], w); });
+});
+
+function showError(msg) { const e=document.getElementById('errorMsg'); e.textContent=msg; e.style.display='block'; }
+function clearError() { document.getElementById('errorMsg').style.display='none'; }
+
+// ======= VOICE INPUT =======
+function setupRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return null;
+  const r = new SpeechRecognition();
+  r.continuous = false; r.interimResults = true; r.maxAlternatives = 1;
+  r.lang = lang === 'te' ? 'te-IN' : lang === 'hi' ? 'hi-IN' : 'en-US';
+  r.onresult = (event) => {
+    let interim = '', final = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const t = event.results[i][0].transcript;
+      if (event.results[i].isFinal) final += t; else interim += t;
+    }
+    voiceText = (voiceText + ' ' + (final || '')).trim();
+    updateTranscript(final || interim, !!final);
+  };
+  r.onend = () => {
+    isListening = false; updateMicUI(false);
+    if (voiceText.trim()) { setVoiceStatus(L('voiceStatusDone'), 'done'); showVoiceActions(true); }
+    else setVoiceStatus(L('voiceStatusIdle'), '');
+  };
+  r.onerror = (e) => {
+    isListening = false; updateMicUI(false); setVoiceStatus(L('voiceStatusIdle'), '');
+    if (e.error !== 'no-speech') showError('Mic error: ' + e.error);
+  };
+  return r;
+}
+
+function toggleListening() {
+  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) { showError(L('errNoMic')); return; }
+  if (isListening) { stopListening(); return; }
+  recognition = setupRecognition();
+  if (!recognition) { showError(L('errNoMic')); return; }
+  clearError(); isListening = true; recognition.start();
+  updateMicUI(true); setVoiceStatus(L('voiceStatusListening'), 'listening');
+}
+function stopListening() {
+  if (recognition) { try { recognition.stop(); } catch(e){} }
+  isListening = false; updateMicUI(false);
+}
+function updateMicUI(listening) {
+  const btn = document.getElementById('micBtn');
+  const waveform = document.getElementById('waveform');
+  btn.textContent = listening ? '⏹️' : '🎙️';
+  btn.classList.toggle('listening', listening);
+  waveform.classList.toggle('active', listening);
+  ['micRing1','micRing2','micRing3'].forEach(id => document.getElementById(id).classList.toggle('idle', !listening));
+}
+function setVoiceStatus(msg, type) {
+  const el = document.getElementById('voiceStatus');
+  el.textContent = msg; el.className = 'voice-status' + (type ? ' ' + type : '');
+}
+function updateTranscript(text, isFinal) {
+  const el = document.getElementById('voiceTranscript');
+  el.textContent = voiceText ? voiceText + (isFinal ? '' : ' ' + text) : text;
+  el.classList.add('has-text');
+}
+function showVoiceActions(show) {
+  document.getElementById('btnVoiceAnalyze').classList.toggle('visible', show);
+  document.getElementById('btnVoiceClear').classList.toggle('visible', show);
+}
+function clearVoice() {
+  voiceText = '';
+  const el = document.getElementById('voiceTranscript');
+  el.textContent = ''; el.classList.remove('has-text');
+  showVoiceActions(false); setVoiceStatus(L('voiceStatusIdle'), '');
+}
+function analyzeVoice() {
+  if (!voiceText.trim()) { showError(L('errEmpty')); return; }
+  document.getElementById('textInput').value = voiceText;
+  activeTab = 'txt'; analyze();
+}
+
+// ======= ANALYZE =======
+async function analyze() {
+  const text = activeTab === 'voice' ? voiceText : document.getElementById('textInput').value.trim();
+  if(activeTab==='rx'  && !imgs.rx)  { showError(L('errEmpty')); return; }
+  if(activeTab==='med' && !imgs.med) { showError(L('errEmpty')); return; }
+  if((activeTab==='txt'||activeTab==='voice') && !text) { showError(L('errEmpty')); return; }
+  clearError();
+  document.getElementById('inputSection').style.display='none';
+  document.getElementById('loadingState').style.display='block';
+  document.getElementById('analyzeBtn').disabled=true;
+
+  const aiLang = TR[lang].aiLang;
+
+  // ===== SCHEMA NOW INCLUDES priceINR =====
+  const schema = `{
+  "medications": [
+    {
+      "name": "Brand name (keep in English/original)",
+      "genericName": "Generic name if different",
+      "dosage": "strength e.g. 500mg",
+      "purpose": "What this drug treats — in target language",
+      "schedule": "When and how often — in target language",
+      "duration": "Duration if stated — in target language (omit if unknown)",
+      "instructions": "Taking instructions — in target language",
+      "sideEffects": ["unique side effect 1", "unique side effect 2", "unique side effect 3"],
+      "warnings": "Warning specific to THIS drug — omit if none",
+      "foodInteractions": "Food/drink to avoid — omit if none",
+      "storage": "Storage instructions",
+      "priceINR": "Approximate Indian market price for a standard pack/strip (e.g. '₹18–25 per strip of 10', '₹45 per bottle 100ml'). Use INR (₹). Provide a realistic range based on common Indian pharmacy pricing. If price is genuinely unknown write null."
+    }
+  ]
+}`;
+
+  const effectiveTab = activeTab === 'voice' ? 'txt' : activeTab;
+  let promptText = '';
+  if(effectiveTab==='med') {
+    promptText = `You are a medical information assistant. ${aiLang}\n\nIdentify the medicine shown in this image. Provide full details including an approximate Indian market price.\n\nIMPORTANT: "sideEffects" must list ONLY the clinically known, drug-specific side effects for THIS exact medicine.\n\nReturn ONLY valid JSON — no markdown, no backticks:\n${schema}`;
+  } else {
+    const inputNote = effectiveTab==='rx'
+      ? 'Extract all medications from this prescription image.'
+      : `Prescription/medicine text: "${text}"\n\nExtract all medications.`;
+    promptText = `You are a medical information assistant. ${aiLang}\n\n${inputNote}\n\nFor each medicine also provide an approximate Indian market price (priceINR field).\n\nIMPORTANT: Each drug's "sideEffects" must list ONLY its own clinically documented, drug-specific side effects.\n\nReturn ONLY valid JSON — no markdown, no backticks:\n${schema}`;
+  }
+
+  try {
+    let content=[];
+    if(effectiveTab==='rx')  content.push({type:'image',source:{type:'base64',media_type:imgs.rxType,data:imgs.rx}});
+    if(effectiveTab==='med') content.push({type:'image',source:{type:'base64',media_type:imgs.medType,data:imgs.med}});
+    content.push({type:'text',text:promptText});
+
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2500,messages:[{role:'user',content}]})
+    });
+    const data=await res.json();
+    const raw=data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(raw);
+    parsedMeds = parsed.medications || [];
+    render(parsedMeds, effectiveTab==='med');
+  } catch {
+    document.getElementById('loadingState').style.display='none';
+    document.getElementById('inputSection').style.display='block';
+    document.getElementById('analyzeBtn').disabled=false;
+    showError(L('errFail'));
+  }
+}
+
+// ======= RENDER =======
+function render(meds, isMedMode) {
+  document.getElementById('loadingState').style.display='none';
+  if(!meds.length) {
+    document.getElementById('inputSection').style.display='block';
+    document.getElementById('analyzeBtn').disabled=false;
+    showError(L('errNone')); return;
+  }
+  const lb = TR[lang].labels;
+  document.getElementById('medBadge').textContent=TR[lang].medCount(meds.length);
+  const container=document.getElementById('medsContainer');
+  container.innerHTML='';
+
+  if(isMedMode && meds.length===1) {
+    const b=document.createElement('div');
+    b.style.padding='16px 28px 0';
+    b.innerHTML=`<div class="identified-banner">✅ ${L('identifiedAs')}: ${meds[0].name}</div>`;
+    container.appendChild(b);
+  }
+
+  meds.forEach((med,i) => {
+    const el=document.createElement('div');
+    el.className='med-item';
+    el.id=`med-item-${i}`;
+    el.style.animationDelay=`${i*0.07}s`;
+    const seTags=(med.sideEffects||[]).map(se=>`<span class="tag">${se}</span>`).join('');
+
+    // Price section
+    const priceHTML = med.priceINR && med.priceINR !== 'null' && med.priceINR !== null
+      ? `<div class="price-strip">
+          <span class="price-emoji">💰</span>
+          <div class="price-strip-content">
+            <div class="price-strip-label">${lb.price}</div>
+            <div class="price-strip-value">${med.priceINR}</div>
+            <div class="price-strip-note">Approx. Indian market price — may vary by pharmacy</div>
+          </div>
+        </div>`
+      : '';
+
+    el.innerHTML=`
+      <div class="med-top">
+        <div>
+          <div class="med-name">${med.name}</div>
+          ${med.genericName&&med.genericName!==med.name?`<div class="med-generic">${med.genericName}</div>`:''}
+        </div>
+        <div class="med-chips">
+          ${med.dosage?`<span class="dose-chip">${med.dosage}</span>`:''}
+        </div>
+      </div>
+      <div class="info-grid">
+        ${row('blue',  lb.purpose,      med.purpose)}
+        ${row('green', lb.schedule,     med.schedule)}
+        ${med.duration         ?row('teal',  lb.duration,     med.duration):''}
+        ${row('purple',lb.instructions, med.instructions)}
+        ${med.foodInteractions ?row('orange',lb.food,         med.foodInteractions):''}
+        ${row('gray',  lb.storage,      med.storage)}
+        ${seTags?`<div class="info-row">
+          <span class="info-key"><span class="dot" style="background:var(--red)"></span>${lb.side}</span>
+          <div class="tags">${seTags}</div>
+        </div>`:''}
+      </div>
+      ${med.warnings?`<div class="warn-strip">⚠️ <span>${med.warnings}</span></div>`:''}
+      ${priceHTML}
+    `;
+    container.appendChild(el);
+  });
+  document.getElementById('resultsState').style.display='block';
+}
+
+const DOT_COLORS={blue:'var(--blue)',green:'var(--green)',teal:'var(--teal)',purple:'var(--purple)',orange:'var(--orange)',gray:'var(--text3)'};
+function row(color,label,val) {
+  if(!val) return '';
+  return `<div class="info-row"><span class="info-key"><span class="dot" style="background:${DOT_COLORS[color]}"></span>${label}</span><span class="info-val">${val}</span></div>`;
+}
+
+// ======= READ ALOUD =======
+function buildSpeechText(meds) {
+  const lb = TR[lang].labels;
+  return meds.map((med, i) => {
+    const parts = [];
+    parts.push(`${i > 0 ? 'Next medication. ' : ''}${med.name}${med.dosage ? ', ' + med.dosage : ''}.`);
+    if (med.purpose)       parts.push(`${lb.purpose}: ${med.purpose}.`);
+    if (med.schedule)      parts.push(`${lb.schedule}: ${med.schedule}.`);
+    if (med.duration)      parts.push(`${lb.duration}: ${med.duration}.`);
+    if (med.instructions)  parts.push(`${lb.instructions}: ${med.instructions}.`);
+    if (med.foodInteractions) parts.push(`${lb.food}: ${med.foodInteractions}.`);
+    if (med.warnings)      parts.push(`Warning: ${med.warnings}.`);
+    if (med.sideEffects && med.sideEffects.length) parts.push(`${lb.side}: ${med.sideEffects.join(', ')}.`);
+    if (med.priceINR && med.priceINR !== 'null' && med.priceINR !== null)
+      parts.push(`${lb.price}: ${med.priceINR}.`);
+    return parts.join(' ');
+  });
+}
+
+function highlightMed(index) {
+  document.querySelectorAll('.med-item').forEach((el, i) => el.classList.toggle('currently-speaking', i === index));
+  if (index >= 0) {
+    const el = document.getElementById(`med-item-${index}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function setBigBtnSpeaking(speaking) {
+  const btn = document.getElementById('btnBigListen');
+  const icon = document.getElementById('btnBigListenIcon');
+  const bannerIcon = document.getElementById('bannerIcon');
+  const nowReading = document.getElementById('nowReadingLabel');
+  const replayBanner = document.getElementById('replayBanner');
+  btn.classList.toggle('speaking', speaking);
+  bannerIcon.classList.toggle('speaking', speaking);
+  nowReading.classList.toggle('visible', speaking);
+  if (speaking) {
+    icon.textContent = '⏹️';
+    document.getElementById('t-bigListenBtn').textContent = L('bigListenBtnStop');
+    replayBanner.classList.remove('visible');
+  } else {
+    icon.textContent = '🔊';
+    document.getElementById('t-bigListenBtn').textContent = L('bigListenBtn');
+  }
+}
+
+function toggleReadAloud() { if (isSpeaking) stopReadAloud(); else startReadAloud(); }
+function replayReadAloud() { document.getElementById('replayBanner').classList.remove('visible'); startReadAloud(); }
+
+function startReadAloud() {
+  if (!synth) return;
+  synth.cancel(); isSpeaking = true;
+  setBigBtnSpeaking(true);
+  document.getElementById('speechProgressBar').classList.add('active');
+  document.getElementById('replayBanner').classList.remove('visible');
+  const speechTexts = buildSpeechText(parsedMeds);
+  const introText = TR[lang].introSpeech(parsedMeds.length);
+
+  function speakNext(idx) {
+    if (!isSpeaking) return;
+    if (idx >= speechTexts.length) { stopReadAloud(true); return; }
+    highlightMed(idx);
+    const fill = document.getElementById('speechProgressFill');
+    fill.style.transition = 'none';
+    fill.style.width = (idx / speechTexts.length * 100) + '%';
+    const utt = makeUtterance(speechTexts[idx]);
+    utt.onstart = () => {
+      fill.style.transition = `width ${Math.max(utt.text.length * 0.055, 2)}s linear`;
+      fill.style.width = ((idx + 1) / speechTexts.length * 100) + '%';
+    };
+    utt.onend  = () => { if (isSpeaking) speakNext(idx + 1); };
+    utt.onerror = () => { if (isSpeaking) speakNext(idx + 1); };
+    synth.speak(utt);
+  }
+
+  const introUtt = makeUtterance(introText);
+  introUtt.pitch = 1.05;
+  introUtt.onend  = () => { if (isSpeaking) speakNext(0); };
+  introUtt.onerror = () => { if (isSpeaking) speakNext(0); };
+  synth.speak(introUtt);
+}
+
+function stopReadAloud(completed = false) {
+  if (!completed) synth.cancel();
+  isSpeaking = false;
+  highlightMed(-1);
+  setBigBtnSpeaking(false);
+  document.getElementById('speechProgressBar').classList.remove('active');
+  const fill = document.getElementById('speechProgressFill');
+  fill.style.transition = completed ? 'width 0.4s ease' : 'none';
+  fill.style.width = completed ? '100%' : '0%';
+  if (completed) {
+    setTimeout(() => {
+      fill.style.transition = 'width 0.5s ease';
+      fill.style.width = '0%';
+      document.getElementById('replayBanner').classList.add('visible');
+    }, 800);
+  }
+}
+
+function reset() {
+  stopReadAloud(); clearVoice(); parsedMeds = [];
+  imgs={rx:null,rxType:null,med:null,medType:null};
+  document.getElementById('resultsState').style.display='none';
+  document.getElementById('inputSection').style.display='block';
+  document.getElementById('replayBanner').classList.remove('visible');
+  document.getElementById('nowReadingLabel').classList.remove('visible');
+  ['rx','med'].forEach(w=>{
+    document.getElementById(`preview-${w}`).style.display='none';
+    document.getElementById(`zone-${w}`).style.display='block';
+  });
+  document.getElementById('textInput').value='';
+  document.getElementById('fileRx').value='';
+  document.getElementById('fileMed').value='';
+  document.getElementById('analyzeBtn').disabled=false;
+  clearError(); switchTab('rx');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+applyStrings();
+</script>
+</body>
+</html>
